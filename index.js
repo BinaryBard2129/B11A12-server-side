@@ -22,8 +22,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
-    console.log("✅ Connected to MongoDB");
+    // await client.connect();
+    // console.log("✅ Connected to MongoDB");
 
     const database = client.db("petAdoptionDB");
     const petsCollection = database.collection("pets");
@@ -45,6 +45,51 @@ async function run() {
         res.status(500).send({ error: "Failed to create payment intent" });
       }
     });
+
+
+    app.put('/donation-campaigns/:id', async (req, res) => {
+  const { id } = req.params;
+  const updatedData = req.body;
+
+  try {
+    console.log("Received update for campaign:", id);
+    console.log("Data:", updatedData);
+
+    const result = await donationCampaigns.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedData }
+    );
+
+    if (result.modifiedCount > 0) {
+      res.send({ success: true, message: "Donation campaign updated successfully." });
+    } else {
+      res.status(400).send({ success: false, message: "No changes were made. Possibly identical data." });
+    }
+  } catch (error) {
+    console.error("Error updating campaign:", error);
+    res.status(500).send({ success: false, message: "Failed to update donation campaign." });
+  }
+});
+
+
+app.delete('/campaigns/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await donationCampaigns.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount > 0) {
+      res.send({ message: "Campaign deleted", deletedCount: result.deletedCount });
+    } else {
+      res.status(404).send({ error: "Campaign not found" });
+    }
+  } catch (err) {
+    console.error("Error deleting campaign:", err);
+    res.status(500).send({ error: "Failed to delete campaign" });
+  }
+});
+
+
+
 
     // 📌 Create Donation Campaign (with creatorEmail required)
     app.post("/donation-campaigns", async (req, res) => {
@@ -88,6 +133,30 @@ async function run() {
         res.status(500).send({ error: "Failed to fetch campaigns" });
       }
     });
+
+   app.put('/pets/:id', async (req, res) => {
+  const petId = req.params.id;
+  const updatedPet = req.body;
+
+  try {
+    const result = await petsCollection.updateOne(
+      { _id: new ObjectId(petId) },
+      { $set: updatedPet } 
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: "Pet not found" });
+    }
+
+    res.status(200).send({ message: "Pet updated successfully" });
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).send({ message: "Failed to update pet" });
+  }
+});
+
+
+
 
     // 📌 Get Campaign by ID
     app.get("/donation-campaigns/:id", async (req, res) => {
@@ -178,6 +247,25 @@ async function run() {
         res.status(500).send({ error: "Failed to save donation" });
       }
     });
+
+   // DELETE a pet by ID
+app.delete('/pet/:id', async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const result = await petsCollection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 1) {
+      res.status(200).send({ message: 'Pet deleted successfully' });
+    } else {
+      res.status(404).send({ message: 'Pet not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting pet:', error);
+    res.status(500).send({ message: 'Internal Server Error' });
+  }
+});
+
 
     // 🐾 Submit Adoption Request
     app.post('/adoptions', async (req, res) => {
